@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+                             http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+         version="4.0">
+
+    <display-name>SVIS API - Sistema de Votaciones y Encuestas Seguras</display-name>
+
+    <!-- Filtro CORS para permitir interoperabilidad con el Frontend PHP y Clientes REST -->
+    <filter>
+        <filter-name>CorsFilter</filter-name>
+        <filter-class>co.edu.svis.servlet.CorsFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>CorsFilter</filter-name>
+        <url-pattern>/api/*</url-pattern>
+    </filter-mapping>
+
+    <!-- Servlet de Autenticación de Usuarios -->
+    <servlet>
+        <servlet-name>AuthServlet</servlet-name>
+        <servlet-class>co.edu.svis.servlet.AuthServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AuthServlet</servlet-name>
+        <url-pattern>/api/auth/*</url-pattern>
+    </servlet-mapping>
+
+    <!-- Servlet de Gestión de Encuestas y Opciones -->
+    <servlet>
+        <servlet-name>EncuestaServlet</servlet-name>
+        <servlet-class>co.edu.svis.servlet.EncuestaServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EncuestaServlet</servlet-name>
+        <url-pattern>/api/encuestas/*</url-pattern>
+    </servlet-mapping>
+
+    <!-- Servlet de Generación y Gestión de Tokens OTP -->
+    <servlet>
+        <servlet-name>TokenServlet</servlet-name>
+        <servlet-class>co.edu.svis.servlet.TokenServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>TokenServlet</servlet-name>
+        <url-pattern>/api/tokens/*</url-pattern>
+    </servlet-mapping>
+
+    <!-- Servlet Transaccional de Emisión de Voto (Blindado con SELECT FOR UPDATE) -->
+    <servlet>
+        <servlet-name>VotoServlet</servlet-name>
+        <servlet-class>co.edu.svis.servlet.VotoServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>VotoServlet</servlet-name>
+        <url-pattern>/api/votos/*</url-pattern>
+    </servlet-mapping>
+
+    <session-config>
+        <session-timeout>30</session-timeout>
+        <tracking-mode>COOKIE</tracking-mode>
+    </session-config>
+</web-app>
