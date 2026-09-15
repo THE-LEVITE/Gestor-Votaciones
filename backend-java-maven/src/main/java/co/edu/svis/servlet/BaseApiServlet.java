@@ -1,5 +1,11 @@
 package co.edu.svis.servlet;
 
+import co.edu.svis.dto.ConflictoException;
+import co.edu.svis.dto.ExpiradoException;
+import co.edu.svis.dto.NegocioException;
+import co.edu.svis.dto.NoAutorizadoException;
+import co.edu.svis.dto.ProhibidoException;
+import co.edu.svis.dto.RecursoNoEncontradoException;
 import co.edu.svis.util.JsonUtil;
 
 import javax.servlet.http.HttpServlet;
@@ -28,6 +34,24 @@ public abstract class BaseApiServlet extends HttpServlet {
         errorBody.put("error", mensaje);
         errorBody.put("status", status);
         writeJson(resp, status, errorBody);
+    }
+
+    protected void handleException(HttpServletResponse resp, Exception e) throws IOException {
+        if (e instanceof NegocioException) {
+            writeError(resp, HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+        } else if (e instanceof RecursoNoEncontradoException) {
+            writeError(resp, HttpServletResponse.SC_NOT_FOUND, e.getMessage());
+        } else if (e instanceof ConflictoException) {
+            writeError(resp, HttpServletResponse.SC_CONFLICT, e.getMessage());
+        } else if (e instanceof ExpiradoException) {
+            writeError(resp, HttpServletResponse.SC_GONE, e.getMessage());
+        } else if (e instanceof ProhibidoException) {
+            writeError(resp, HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+        } else if (e instanceof NoAutorizadoException) {
+            writeError(resp, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+        } else {
+            writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error interno del servidor: " + e.getMessage());
+        }
     }
 
     protected String readBody(HttpServletRequest req) throws IOException {

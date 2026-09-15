@@ -1,95 +1,40 @@
 package co.edu.svis.servlet;
 
-import co.edu.svis.config.ConexionBD;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import co.edu.svis.config.AppContext;
+import co.edu.svis.dto.LoginRequest;
+import co.edu.svis.dto.LoginResponse;
+import co.edu.svis.service.AuthService;
+import co.edu.svis.util.JsonUtil;
 
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
- * Servlet para autenticación institucional de usuarios (Administradores y Aprendices).
- * Permite que el Frontend PHP verifique credenciales sin exponer la conexión a MySQL.
+ * Controlador REST para autenticación institucional de usuarios.
+ * Aplica el principio de Responsabilidad Única (SRP), delegando la lógica a {@link AuthService}.
  */
 @WebServlet(name = "AuthServlet", urlPatterns = {"/api/auth/login"})
 public class AuthServlet extends BaseApiServlet {
 
+    private final AuthService authService = AppContext.get().getAuthService();
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String body = readBody(req);
-        if (body == null || body.trim().isEmpty()) {
-            writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Cuerpo de solicitud requerido");
-            return;
-        }
-
-        JsonObject json;
         try {
-            json = JsonParser.parseString(body).getAsJsonObject();
-        } catch (Exception e) {
-            writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "JSON mal formado");
-            return;
-        }
-
-        String identificador = json.has("identificador") ? json.get("identificador").getAsString().trim() : 
-                               (json.has("email") ? json.get("email").getAsString().trim() : "");
-        String password = json.has("password") ? json.get("password").getAsString().trim() : "";
-
-        if (identificador.isEmpty() || password.isEmpty()) {
-            writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Identificador (correo o documento) y contraseña requeridos");
-            return;
-        }
-
-        String sql = "SELECT id, documento, nombre_completo, email, password, rol, estado " +
-                     "FROM usuarios WHERE (email = ? OR documento = ?)";
-
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, identificador);
-            ps.setString(2, identificador);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    String dbPass = rs.getString("password");
-                    String estado = rs.getString("estado");
-
-                    if (!"ACTIVO".equalsIgnoreCase(estado)) {
-                        writeError(resp, HttpServletResponse.SC_FORBIDDEN, "Usuario inactivo en el sistema");
-                        return;
-                    }
-
-                    // Validación de contraseña
-                    if (dbPass.equals(password)) {
-                        Map<String, Object> usuario = new HashMap<>();
-                        usuario.put("id", rs.getInt("id"));
-                        usuario.put("documento", rs.getString("documento"));
-                        usuario.put("nombreCompleto", rs.getString("nombre_completo"));
-                        usuario.put("email", rs.getString("email"));
-                        usuario.put("rol", rs.getString("rol"));
-
-                        Map<String, Object> responseData = new HashMap<>();
-                        responseData.put("success", true);
-                        responseData.put("mensaje", "Autenticación exitosa");
-                        responseData.put("usuario", usuario);
-
-                        writeJson(resp, HttpServletResponse.SC_OK, responseData);
-                        return;
-                    }
-                }
+            String body = readBody(req);
+            if (body == null || body.trim().isEmpty()) {
+                writeError(resp, HttpServletResponse.SC_BAD_REQUEST, "Cuerpo de solicitud requerido");
+                return;
             }
 
-            writeError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Credenciales inválidas");
+            LoginRequest loginReq = JsonUtil.fromJson(body, LoginRequest.class);
+            LoginResponse responseData = authService.login(loginReq);
+            writeJson(resp, HttpServletResponse.SC_OK, responseData);
 
-        } catch (SQLException e) {
-            writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            handleException(resp, e);
         }
     }
 }
